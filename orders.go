@@ -11,6 +11,21 @@ import (
 
 // GetOrders returns a list of existing orders
 func (wc *WooCommerce) GetOrders(page int) ([]models.Order, error) {
+	body, err := wc.GetOrdersJSON(page)
+	if err != nil {
+		return nil, err
+	}
+
+	var result []models.Order
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// GetOrdersJSON returns the raw JSON data from WooCommerce endpoint
+func (wc *WooCommerce) GetOrdersJSON(page int) ([]byte, error) {
 	if page < 1 {
 		page = 1
 	}
@@ -33,10 +48,5 @@ func (wc *WooCommerce) GetOrders(page int) ([]models.Order, error) {
 	}
 	_ = resp.Body.Close()
 
-	var result []models.Order
-	if err := json.Unmarshal(body, &result); err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return body, nil
 }
