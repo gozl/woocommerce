@@ -2,12 +2,11 @@ package models
 
 import (
 	"encoding/json"
-	"strings"
 )
 
 // ProductItem represents a product associated with an order
 type ProductItem struct {
-	//*TaxableCost
+	*TaxableCost
 	ID int                 `json:"id,omitempty"`
 	Name string            `json:"name,omitempty"`
 	ProductID int          `json:"product_id,omitempty"`
@@ -16,9 +15,9 @@ type ProductItem struct {
 	SKU string             `json:"sku,omitempty"`
 	TaxClass string        `json:"tax_class,omitempty"`
 	Metadata []MetaItem    `json:"meta_data,omitempty"`
-	Subtotal string        `json:"subtotal,omitempty"` //fd
-	SubtotalTax string     `json:"subtotal_tax,omitempty"` //fd
-	Price string           `json:"price,omitempty"` //fd
+	Subtotal float64       `json:"subtotal,omitempty"`
+	SubtotalTax float64    `json:"subtotal_tax,omitempty"`
+	Price float64          `json:"price,omitempty"`
 }
 
 // UnmarshalJSON parses JSON encoded data to a ProductItem struct
@@ -27,29 +26,117 @@ func (c *ProductItem) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	type rObj ProductItem
-	aux := &struct{
-		*rObj
-	}{
-		rObj: (*rObj)(c),
+	var objmap map[string]json.RawMessage
+	err := json.Unmarshal(data, &objmap)
+	if err != nil {
+		return err
 	}
 
-	if err := json.Unmarshal(data, &aux); err != nil {
-		if strings.Contains(err.Error(), "cannot unmarshal string into Go struct") && strings.Contains(err.Error(), "[]models.MetaItem") {
-			aux2 := &struct{
-				Metadata        string `json:"meta_data,omitempty"`
-				*rObj
-			}{
-				rObj: (*rObj)(c),
-			}
-
-			if err2 := json.Unmarshal(data, &aux2); err2 != nil {
-				return err2
-			}
-		} else {
+	_, ok := objmap["id"]
+	if ok {
+		err = json.Unmarshal(objmap["id"], &c.ID)
+		if err != nil {
 			return err
 		}
 	}
+
+	_, ok = objmap["name"]
+	if ok {
+		err = json.Unmarshal(objmap["name"], &c.Name)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["product_id"]
+	if ok {
+		err = json.Unmarshal(objmap["product_id"], &c.ProductID)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["variation_id"]
+	if ok {
+		err = json.Unmarshal(objmap["variation_id"], &c.VariationID)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["quantity"]
+	if ok {
+		err = json.Unmarshal(objmap["quantity"], &c.Quantity)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["sku"]
+	if ok {
+		err = json.Unmarshal(objmap["sku"], &c.SKU)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["tax_class"]
+	if ok {
+		err = json.Unmarshal(objmap["tax_class"], &c.TaxClass)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["meta_data"]
+	if ok {
+		c.Metadata, err = tryMarshalMetadata(objmap["meta_data"])
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["subtotal"]
+	if ok {
+		err = json.Unmarshal(objmap["subtotal"], &c.Subtotal)
+		if err != nil {
+			c.Subtotal, err = tryMarshalStringAsFloat64(objmap["subtotal"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, ok = objmap["subtotal_tax"]
+	if ok {
+		err = json.Unmarshal(objmap["subtotal_tax"], &c.SubtotalTax)
+		if err != nil {
+			c.SubtotalTax, err = tryMarshalStringAsFloat64(objmap["subtotal_tax"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, ok = objmap["price"]
+	if ok {
+		err = json.Unmarshal(objmap["price"], &c.Price)
+		if err != nil {
+			c.Price, err = tryMarshalStringAsFloat64(objmap["price"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// embedded *TaxableCost
+
+	var tc TaxableCost
+	errTC := json.Unmarshal(data, &tc)
+	if errTC != nil {
+		return errTC
+	}
+	c.TaxableCost = &tc
 
 	return nil
 }

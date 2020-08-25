@@ -1,7 +1,6 @@
 package models
 
 import (
-	"strconv"
 	"encoding/json"
 )
 
@@ -11,36 +10,12 @@ type Price struct {
 	CurrencySymbol string  `json:"currency_symbol,omitempty"`
 	Discount float64       `json:"discount_total,omitempty"`
 	DiscountTax float64    `json:"discount_tax,omitempty"`
-	Shipping float64       `json:"shipping_total,omitempty"`
+	ShippingCost float64   `json:"shipping_total,omitempty"`
 	ShippingTax float64    `json:"shipping_tax,omitempty"`
 	CartTax float64        `json:"cart_tax,omitempty"`
 	Total float64          `json:"total,omitempty"`
 	TotalTax float64       `json:"total_tax,omitempty"`
 	TaxIncluded bool       `json:"prices_include_tax,omitempty"`
-}
-
-// MarshalJSON serializes a Price struct to JSON encoded data
-func (c *Price) MarshalJSON() ([]byte, error) {
-	type jsonObj Price
-	return json.Marshal(&struct{
-		Discount     string `json:"discount_total,omitempty"`
-		DiscountTax  string `json:"discount_tax,omitempty"`
-		Shipping     string `json:"shipping_total,omitempty"`
-		ShippingTax  string `json:"shipping_tax,omitempty"`
-		CartTax      string `json:"cart_tax,omitempty"`
-		Total        string `json:"total,omitempty"`
-		TotalTax     string `json:"total_tax,omitempty"`
-		*jsonObj
-	}{
-		Discount: strconv.FormatFloat(c.Discount, 'f', -1, 64),
-		DiscountTax: strconv.FormatFloat(c.DiscountTax, 'f', -1, 64),
-		Shipping: strconv.FormatFloat(c.Shipping, 'f', -1, 64),
-		ShippingTax: strconv.FormatFloat(c.ShippingTax, 'f', -1, 64),
-		CartTax: strconv.FormatFloat(c.CartTax, 'f', -1, 64),
-		Total: strconv.FormatFloat(c.Total, 'f', -1, 64),
-		TotalTax: strconv.FormatFloat(c.TotalTax, 'f', -1, 64),
-		jsonObj:  (*jsonObj)(c),
-	})
 }
 
 // UnmarshalJSON parses JSON encoded data to a Price struct
@@ -49,59 +24,111 @@ func (c *Price) UnmarshalJSON(data []byte) error {
 		return nil
 	}
 
-	type rObj Price
-	aux := &struct{
-		Discount     string `json:"discount_total,omitempty"`
-		DiscountTax  string `json:"discount_tax,omitempty"`
-		Shipping     string `json:"shipping_total,omitempty"`
-		ShippingTax  string `json:"shipping_tax,omitempty"`
-		CartTax      string `json:"cart_tax,omitempty"`
-		Total        string `json:"total,omitempty"`
-		TotalTax     string `json:"total_tax,omitempty"`
-		*rObj
-	}{
-		rObj: (*rObj)(c),
-	}
-
-	if err := json.Unmarshal(data, &aux); err != nil {
+	var objmap map[string]json.RawMessage
+	err := json.Unmarshal(data, &objmap)
+	if err != nil {
 		return err
 	}
 
-	var errFloat error
-
-	c.Discount, errFloat = strconv.ParseFloat(aux.Discount, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok := objmap["currency"]
+	if ok {
+		err = json.Unmarshal(objmap["currency"], &c.Currency)
+		if err != nil {
+			return err
+		}
 	}
 
-	c.DiscountTax, errFloat = strconv.ParseFloat(aux.DiscountTax, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok = objmap["currency_symbol"]
+	if ok {
+		err = json.Unmarshal(objmap["currency_symbol"], &c.CurrencySymbol)
+		if err != nil {
+			return err
+		}
 	}
 
-	c.Shipping, errFloat = strconv.ParseFloat(aux.Shipping, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok = objmap["prices_include_tax"]
+	if ok {
+		err = json.Unmarshal(objmap["prices_include_tax"], &c.TaxIncluded)
+		if err != nil {
+			return err
+		}
 	}
 
-	c.ShippingTax, errFloat = strconv.ParseFloat(aux.ShippingTax, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok = objmap["discount_total"]
+	if ok {
+		err = json.Unmarshal(objmap["discount_total"], &c.Discount)
+		if err != nil {
+			c.Discount, err = tryMarshalStringAsFloat64(objmap["discount_total"])
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	c.CartTax, errFloat = strconv.ParseFloat(aux.CartTax, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok = objmap["discount_tax"]
+	if ok {
+		err = json.Unmarshal(objmap["discount_tax"], &c.DiscountTax)
+		if err != nil {
+			c.DiscountTax, err = tryMarshalStringAsFloat64(objmap["discount_tax"])
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	c.Total, errFloat = strconv.ParseFloat(aux.Total, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok = objmap["shipping_total"]
+	if ok {
+		err = json.Unmarshal(objmap["shipping_total"], &c.ShippingCost)
+		if err != nil {
+			c.ShippingCost, err = tryMarshalStringAsFloat64(objmap["shipping_total"])
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	c.TotalTax, errFloat = strconv.ParseFloat(aux.TotalTax, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok = objmap["shipping_tax"]
+	if ok {
+		err = json.Unmarshal(objmap["shipping_tax"], &c.ShippingTax)
+		if err != nil {
+			c.ShippingTax, err = tryMarshalStringAsFloat64(objmap["shipping_tax"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, ok = objmap["cart_tax"]
+	if ok {
+		err = json.Unmarshal(objmap["cart_tax"], &c.CartTax)
+		if err != nil {
+			c.CartTax, err = tryMarshalStringAsFloat64(objmap["cart_tax"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, ok = objmap["total"]
+	if ok {
+		err = json.Unmarshal(objmap["total"], &c.Total)
+		if err != nil {
+			c.Total, err = tryMarshalStringAsFloat64(objmap["total"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, ok = objmap["total_tax"]
+	if ok {
+		err = json.Unmarshal(objmap["total_tax"], &c.TotalTax)
+		if err != nil {
+			c.TotalTax, err = tryMarshalStringAsFloat64(objmap["total_tax"])
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

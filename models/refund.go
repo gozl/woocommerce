@@ -1,7 +1,6 @@
 package models
 
 import (
-	"strconv"
 	"encoding/json"
 )
 
@@ -12,41 +11,43 @@ type RefundItem struct {
 	Total float64          `json:"total,omitempty"`
 }
 
-// MarshalJSON serializes a RefundItem struct to JSON encoded data
-func (c *RefundItem) MarshalJSON() ([]byte, error) {
-	type jsonObj RefundItem
-	return json.Marshal(&struct{
-		Total           string `json:"total,omitempty"`
-		*jsonObj
-	}{
-		Total: strconv.FormatFloat(c.Total, 'f', -1, 64),
-		jsonObj:  (*jsonObj)(c),
-	})
-}
-
 // UnmarshalJSON parses JSON encoded data to a RefundItem struct
 func (c *RefundItem) UnmarshalJSON(data []byte) error {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
 
-	type rObj RefundItem
-	aux := &struct{
-		Total           string `json:"total,omitempty"`
-		*rObj
-	}{
-		rObj: (*rObj)(c),
-	}
-
-	if err := json.Unmarshal(data, &aux); err != nil {
+	var objmap map[string]json.RawMessage
+	err := json.Unmarshal(data, &objmap)
+	if err != nil {
 		return err
 	}
 
-	var errFloat error
+	_, ok := objmap["id"]
+	if ok {
+		err = json.Unmarshal(objmap["id"], &c.ID)
+		if err != nil {
+			return err
+		}
+	}
 
-	c.Total, errFloat = strconv.ParseFloat(aux.Total, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok = objmap["reason"]
+	if ok {
+		err = json.Unmarshal(objmap["reason"], &c.Reason)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["total"]
+	if ok {
+		err = json.Unmarshal(objmap["total"], &c.Total)
+		if err != nil {
+			c.Total, err = tryMarshalStringAsFloat64(objmap["total"])
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

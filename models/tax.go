@@ -1,9 +1,7 @@
 package models
 
 import (
-	"strconv"
 	"encoding/json"
-	"strings"
 )
 
 // TaxableCost is any cost that is taxable
@@ -13,71 +11,46 @@ type TaxableCost struct {
 	Taxes []TaxItem        `json:"taxes,omitempty"`
 }
 
-// MarshalJSON serializes a TaxableCost struct to JSON encoded data
-func (c *TaxableCost) MarshalJSON() ([]byte, error) {
-	type jsonObj TaxableCost
-	return json.Marshal(&struct{
-		Total        string `json:"total,omitempty"`
-		TotalTax     string `json:"total_tax,omitempty"`
-		*jsonObj
-	}{
-		Total: strconv.FormatFloat(c.Total, 'f', -1, 64),
-		TotalTax: strconv.FormatFloat(c.TotalTax, 'f', -1, 64),
-		jsonObj:  (*jsonObj)(c),
-	})
-}
-
 // UnmarshalJSON parses JSON encoded data to a TaxableCost struct
 func (c *TaxableCost) UnmarshalJSON(data []byte) error {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
 
-	type rObj TaxableCost
-	aux := &struct{
-		Total        string `json:"total,omitempty"`
-		TotalTax     string `json:"total_tax,omitempty"`
-		*rObj
-	}{
-		rObj: (*rObj)(c),
+	var objmap map[string]json.RawMessage
+	err := json.Unmarshal(data, &objmap)
+	if err != nil {
+		return err
 	}
 
-	var totalStr, totalTaxStr string
-	if err := json.Unmarshal(data, &aux); err != nil {
-		if strings.Contains(err.Error(), "cannot unmarshal string into Go struct field") {
-			aux2 := &struct{
-				Total        string `json:"total,omitempty"`
-				TotalTax     string `json:"total_tax,omitempty"`
-				Taxes        string `json:"taxes,omitempty"`
-				*rObj
-			}{
-				rObj: (*rObj)(c),
+	_, ok := objmap["total"]
+	if ok {
+		err = json.Unmarshal(objmap["total"], &c.Total)
+		if err != nil {
+			c.Total, err = tryMarshalStringAsFloat64(objmap["total"])
+			if err != nil {
+				return err
 			}
+		}
+	}
 
-			if err2 := json.Unmarshal(data, &aux2); err2 != nil {
-				return err2
+	_, ok = objmap["total_tax"]
+	if ok {
+		err = json.Unmarshal(objmap["total_tax"], &c.TotalTax)
+		if err != nil {
+			c.TotalTax, err = tryMarshalStringAsFloat64(objmap["total_tax"])
+			if err != nil {
+				return err
 			}
+		}
+	}
 
-			totalStr = aux2.Total
-			totalTaxStr = aux2.TotalTax
-		} else {
+	_, ok = objmap["taxes"]
+	if ok {
+		err := json.Unmarshal(objmap["taxes"], &c.Taxes)
+		if err != nil {
 			return err
 		}
-	} else {
-		totalStr = aux.Total
-		totalTaxStr = aux.TotalTax
-	}
-
-	var errFloat error
-
-	c.Total, errFloat = strconv.ParseFloat(totalStr, 64)
-	if errFloat != nil {
-		return errFloat
-	}
-
-	c.TotalTax, errFloat = strconv.ParseFloat(totalTaxStr, 64)
-	if errFloat != nil {
-		return errFloat
 	}
 
 	return nil
@@ -96,49 +69,97 @@ type TaxItem struct {
 	Metadata []MetaItem    `json:"meta_data,omitempty"`
 }
 
-// MarshalJSON serializes a TaxItem struct to JSON encoded data
-func (c *TaxItem) MarshalJSON() ([]byte, error) {
-	type jsonObj TaxItem
-	return json.Marshal(&struct{
-		Total        string `json:"tax_total,omitempty"`
-		Shipping     string `json:"shipping_tax_total,omitempty"`
-		*jsonObj
-	}{
-		Total: strconv.FormatFloat(c.Total, 'f', -1, 64),
-		Shipping: strconv.FormatFloat(c.Shipping, 'f', -1, 64),
-		jsonObj:  (*jsonObj)(c),
-	})
-}
-
 // UnmarshalJSON parses JSON encoded data to a TaxItem struct
 func (c *TaxItem) UnmarshalJSON(data []byte) error {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
 
-	type rObj TaxItem
-	aux := &struct{
-		Total        string `json:"tax_total,omitempty"`
-		Shipping     string `json:"shipping_tax_total,omitempty"`
-		*rObj
-	}{
-		rObj: (*rObj)(c),
-	}
-
-	if err := json.Unmarshal(data, &aux); err != nil {
+	var objmap map[string]json.RawMessage
+	err := json.Unmarshal(data, &objmap)
+	if err != nil {
 		return err
 	}
 
-	var errFloat error
-
-	c.Total, errFloat = strconv.ParseFloat(aux.Total, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok := objmap["id"]
+	if ok {
+		err = json.Unmarshal(objmap["id"], &c.ID)
+		if err != nil {
+			return err
+		}
 	}
 
-	c.Shipping, errFloat = strconv.ParseFloat(aux.Shipping, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok = objmap["rate_code"]
+	if ok {
+		err = json.Unmarshal(objmap["rate_code"], &c.RateCode)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["rate_id"]
+	if ok {
+		err = json.Unmarshal(objmap["rate_id"], &c.RateID)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["label"]
+	if ok {
+		err = json.Unmarshal(objmap["label"], &c.Label)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["compound"]
+	if ok {
+		err = json.Unmarshal(objmap["compound"], &c.Compound)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["total"]
+	if ok {
+		err = json.Unmarshal(objmap["total"], &c.Total)
+		if err != nil {
+			c.Total, err = tryMarshalStringAsFloat64(objmap["total"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, ok = objmap["shipping"]
+	if ok {
+		err = json.Unmarshal(objmap["shipping"], &c.Shipping)
+		if err != nil {
+			c.Shipping, err = tryMarshalStringAsFloat64(objmap["shipping"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, ok = objmap["rate_percent"]
+	if ok {
+		err = json.Unmarshal(objmap["rate_percent"], &c.RatePercent)
+		if err != nil {
+			c.RatePercent, err = tryMarshalStringAsFloat64(objmap["rate_percent"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, ok = objmap["meta_data"]
+	if ok {
+		c.Metadata, err = tryMarshalMetadata(objmap["meta_data"])
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

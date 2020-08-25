@@ -1,7 +1,6 @@
 package models
 
 import (
-	"strconv"
 	"encoding/json"
 )
 
@@ -14,49 +13,62 @@ type CouponItem struct {
 	Metadata []MetaItem    `json:"meta_data,omitempty"`
 }
 
-// MarshalJSON serializes a CouponItem struct to JSON encoded data
-func (c *CouponItem) MarshalJSON() ([]byte, error) {
-	type jsonObj CouponItem
-	return json.Marshal(&struct{
-		Discount        string `json:"discount,omitempty"`
-		DiscountTax     string `json:"discount_tax,omitempty"`
-		*jsonObj
-	}{
-		Discount: strconv.FormatFloat(c.Discount, 'f', -1, 64),
-		DiscountTax: strconv.FormatFloat(c.DiscountTax, 'f', -1, 64),
-		jsonObj:  (*jsonObj)(c),
-	})
-}
-
 // UnmarshalJSON parses JSON encoded data to a CouponItem struct
 func (c *CouponItem) UnmarshalJSON(data []byte) error {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
 
-	type rObj CouponItem
-	aux := &struct{
-		Discount        string `json:"discount,omitempty"`
-		DiscountTax     string `json:"discount_tax,omitempty"`
-		*rObj
-	}{
-		rObj: (*rObj)(c),
-	}
-
-	if err := json.Unmarshal(data, &aux); err != nil {
+	var objmap map[string]json.RawMessage
+	err := json.Unmarshal(data, &objmap)
+	if err != nil {
 		return err
 	}
 
-	var errFloat error
-
-	c.Discount, errFloat = strconv.ParseFloat(aux.Discount, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok := objmap["id"]
+	if ok {
+		err = json.Unmarshal(objmap["id"], &c.ID)
+		if err != nil {
+			return err
+		}
 	}
 
-	c.DiscountTax, errFloat = strconv.ParseFloat(aux.DiscountTax, 64)
-	if errFloat != nil {
-		return errFloat
+	_, ok = objmap["code"]
+	if ok {
+		err = json.Unmarshal(objmap["code"], &c.Code)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["meta_data"]
+	if ok {
+		c.Metadata, err = tryMarshalMetadata(objmap["meta_data"])
+		if err != nil {
+			return err
+		}
+	}
+
+	_, ok = objmap["discount"]
+	if ok {
+		err = json.Unmarshal(objmap["discount"], &c.Discount)
+		if err != nil {
+			c.Discount, err = tryMarshalStringAsFloat64(objmap["discount"])
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	_, ok = objmap["discount_tax"]
+	if ok {
+		err = json.Unmarshal(objmap["discount_tax"], &c.DiscountTax)
+		if err != nil {
+			c.DiscountTax, err = tryMarshalStringAsFloat64(objmap["discount_tax"])
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil
